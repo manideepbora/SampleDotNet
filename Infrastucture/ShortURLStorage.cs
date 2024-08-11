@@ -22,7 +22,7 @@ namespace ShortURLService.Infrastucture
             return Task.Run(() => { 
                 if( !_shortURLs.TryAdd(shortURL.ShortURL, shortURL))
                 { 
-                    throw new InvalidOperationException("Short URL already exists");
+                    throw new InvalidOperationException();
                 }
                 });
         }

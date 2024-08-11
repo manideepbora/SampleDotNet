@@ -11,10 +11,13 @@ public class CommandLineService : IInvokeService
     {
         do 
         {
-            Console.WriteLine("Add a new long URL (A):");
-            Console.WriteLine("Delete a new long URL (D):");
-            Console.WriteLine("Get a long URL (R):");
-            Console.WriteLine("Get statistics of the short URL (S):");
+            Console.WriteLine("<===== Welcome to URL Shortener Service =====>");
+            Console.WriteLine("Add a new long URL               (A):");
+            Console.WriteLine("Delete a new long URL            (D):");
+            Console.WriteLine("Get a long URL                   (R):");
+            Console.WriteLine("Get statistics of the short URL  (S):");
+            Console.WriteLine("Please Enter your choice:            ");
+
             var response = Console.ReadLine();
             switch (response?.ToLower())
             {
@@ -26,17 +29,18 @@ public class CommandLineService : IInvokeService
                         .GetResult();
                     break;
                 case "r":
-                    GetUrl();
+                    GetUrl().GetAwaiter().GetResult();
                     break;
                 case "s":
-                    GetStatistics();
+                    GetStatistics().GetAwaiter().GetResult();
                     break;
                 default:
                     Console.WriteLine("Invalid option");
                     break;
             }
-
+            Console.WriteLine("===========================================");
             Console.WriteLine("Do you want to continue? (y/n)");
+
         } while (Console.ReadLine()?.ToLower() == "y");
     }
 
@@ -47,14 +51,31 @@ public class CommandLineService : IInvokeService
         var longUrl = Console.ReadLine();
         if (longUrl != null)
         {
-            try{
-                string shortUrl = await _UrlSvc.ShortenUrl(longUrl);
-                Console.WriteLine($"Short URL: {shortUrl}");
-            }   
-            catch (UriFormatException)
+            Console.WriteLine("Shortening the URL...");
+            var customUrl = Console.ReadLine();
+            if(! string.IsNullOrEmpty(customUrl))
             {
-                Console.WriteLine("Invalid URL");
-                return;
+                try{
+                    string shortUrl = await _UrlSvc.ShortenUrl(longUrl, customUrl);
+                    Console.WriteLine($"Short URL: {shortUrl}");
+                }
+                catch (Exception )
+                {
+                    Console.WriteLine("Short URL already exists.");
+                    return;
+                }
+            }
+            else
+            {
+                try{
+                    string shortUrl = await _UrlSvc.ShortenUrl(longUrl);
+                    Console.WriteLine($"Short URL: {shortUrl}");
+                }   
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    return;
+                }
             }
         }
         else
@@ -74,13 +95,13 @@ public class CommandLineService : IInvokeService
         try {
             await _UrlSvc.DeleteUrl(shortUrlToDelete);
         }
-        catch (System.InvalidOperationException)
+        catch (Exception e)
         {
-            Console.WriteLine("Short URL does not exist");
+            Console.WriteLine(e.Message);
             return;
         }
     }   
-    private async void GetUrl()
+    private async Task GetUrl()
     {
         Console.WriteLine("Enter the short URL:");
         var shortUrlToGet = Console.ReadLine();
@@ -90,16 +111,16 @@ public class CommandLineService : IInvokeService
             return;
         }
         try {
-            var longUrl = _UrlSvc.ExpandUrl(shortUrlToGet).GetAwaiter().GetResult();
+            var longUrl = await _UrlSvc.ExpandUrl(shortUrlToGet);
             Console.WriteLine($"Long URL: {longUrl}");
         }
-        catch (System.InvalidOperationException)
+        catch (Exception e)
         {
-            Console.WriteLine("Short URL does not exist");
+            Console.WriteLine(e.Message);
             return;
         }
     }
-    private void GetStatistics()
+    private async Task GetStatistics()
     {
         Console.WriteLine("Enter the short URL:");
         var shortUrlToGetStats = Console.ReadLine();
@@ -109,14 +130,15 @@ public class CommandLineService : IInvokeService
             return;
         }
         try {
-            var stats = _UrlSvc.GetStatistics(shortUrlToGetStats).GetAwaiter().GetResult();
+            var stats = await _UrlSvc.GetStatistics(shortUrlToGetStats);
             Console.WriteLine($"Short URL: {shortUrlToGetStats}");
             Console.WriteLine($"Number of times accessed: {stats.NumberOfTimesAccessed}");
             Console.WriteLine($"Last accessed on: {stats.LastAccessedOn}");
         }
-        catch (System.InvalidOperationException)
+
+        catch (Exception e)
         {
-            Console.WriteLine("Short URL does not exist");
+            Console.WriteLine(e.Message);
             return;
         }
     }

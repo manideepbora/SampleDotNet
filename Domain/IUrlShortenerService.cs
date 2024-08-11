@@ -8,6 +8,4 @@ namespace ShortURLService.Domain
         Task  DeleteUrl(string shortenedUrl);
         Task<ShortenUrlStatistics> GetStatistics(string shortenedUrl);
    };
-
- 
 }
