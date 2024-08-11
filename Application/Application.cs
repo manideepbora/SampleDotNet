@@ -51,7 +51,7 @@ public class CommandLineService : IInvokeService
         var longUrl = Console.ReadLine();
         if (longUrl != null)
         {
-            Console.WriteLine("Shortening the URL...");
+            Console.WriteLine("Please provide the custom short url (optional):");
             var customUrl = Console.ReadLine();
             if(! string.IsNullOrEmpty(customUrl))
             {
