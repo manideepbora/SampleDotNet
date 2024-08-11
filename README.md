@@ -35,6 +35,7 @@ S - Provide statistics of the short URL ues, the number of times the URL is acce
 
 ## Collision resolution
 
+The application uses SHA256 to create a hash for the long URL. The algorithm generates a 32-byte (32-character) string with a very low probability of collision. However, for usability, this app only uses 10 characters. If a collision is detected, it tries to resolve it by appending 1, 2, 3, 4, 5 at the end. If more collisions are detected, the system may use more characters (up to 32) or increase the options for appending suffixes
 
 ## Contributing
 

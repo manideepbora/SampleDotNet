@@ -8,73 +8,69 @@ namespace ShortURLService.Domain
 
     public class UrlShortenerService : IUrlShortenerService
     {
-        private readonly IShortURLStorage _storage;
+       private readonly IShortURLStorage _storage;
+       private readonly string _prefix = "www.example.com/";
         
-        public UrlShortenerService(IShortURLStorage storage)    
+       public UrlShortenerService(IShortURLStorage storage)    
         {
             _storage = storage;
         }
 
-        public async Task<string> ShortenUrl(string originalUrl)
+       public async Task<string> ShortenUrl(string originalUrl)
         {
-            var genURL = "";
-            bool foundUnique = false;
-            do{
-                using (SHA256 sha256Hash = SHA256.Create())
-                {
-                    byte[] bytes = sha256Hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(originalUrl));
-                    genURL = BitConverter.ToString(bytes).Replace("-", string.Empty).Substring(0, 5);
-                }
-                genURL = "www.example.com/" + genURL;
-                try
-                {
-                    var data = await _storage.GetShortURLByIdAsync(genURL);
-                    if(originalUrl == data.LongURL)
+            int retry =0;
+            do {
+                //already shortened
+                try {
+                    var shortURL = await GetShortURLObjectFromLongURL(originalUrl, retry);
+                    if(originalUrl == shortURL.LongURL)
                     {
-                        return data.ShortURL;
+                        return FullShortURLFromToken(shortURL.ShortURL);
                     }
                 }
-                catch (System.Exception)
+                catch (Exception)
                 {
-                    foundUnique = true;
                 }
-
-            } while (!foundUnique);
-
-            try
-            {
-                var shortURL = new ShortURLObject(){ShortURL = genURL, LongURL = originalUrl};
-                await _storage.AddShortURLAsync(genURL, shortURL);
-                return shortURL.ShortURL;
             }
-            catch (System.InvalidOperationException)
-            {
-                throw new System.InvalidOperationException("Short URL already exists.");
-            } 
-        }
+            while (retry++ < 5);
 
+            retry = 0;
+            do{
+                var genURL = await GenerateShortUrl(originalUrl, retry);
+                try
+                {
+                    var shortURL = new ShortURLObject(){ShortURL = genURL, LongURL = originalUrl};
+                    await _storage.AddShortURLAsync(genURL, shortURL);
+                    return FullShortURLFromToken( shortURL.ShortURL);
+                }
+                catch (System.InvalidOperationException)
+                {   
+                } 
+
+            } while (retry++ < 5);
+            throw new System.InvalidOperationException("Short URL already exists.");
+        }
        public async Task<string> ShortenUrl(string originalUrl, string customShortenedUrl)
        {
         try
            {
-               var newCustomShortenedUrl = "www.example.com/" + customShortenedUrl.Trim(); 
+               var newCustomShortenedUrl = customShortenedUrl.Trim(); 
                var shortURL = new ShortURLObject(){ShortURL = newCustomShortenedUrl, LongURL = originalUrl};
                await _storage.AddShortURLAsync(newCustomShortenedUrl, shortURL);
                await _storage.AddCustomURL(originalUrl, newCustomShortenedUrl);
-               return shortURL.ShortURL;
+               return FullShortURLFromToken( shortURL.ShortURL);
            }
            catch (System.Exception )
            {
                throw new System.InvalidOperationException("Short URL already exists.");
            }
 
-           throw new NotImplementedException();
        }
-
        public async Task<string> ExpandUrl(string shortenedUrl)
        {
         try{
-            var shortURL = await _storage.GetShortURLByIdAsync(shortenedUrl);
+            var token = TokenFromFullShortURL(shortenedUrl);
+            var shortURL = await _storage.GetShortURLByIdAsync(token);
             shortURL.TimeAccess++;
             shortURL.LastAccessed = DateTime.Now;
             await _storage.UpdateShortURLAsync(shortURL.ShortURL, shortURL);
@@ -84,47 +80,63 @@ namespace ShortURLService.Domain
            throw new System.InvalidOperationException("Short URL Not exists.");
         }
        }
-
        public async Task DeleteUrl(string longUrl)
        {
-        try{
-            var shortenedUrl = await GetShortURLObjectFromLongURL(longUrl);
-            await _storage.DeleteShortURLAsync(shortenedUrl.ShortURL);
+            int retry =0;
+            do{
+                try{
+                    var shortenedUrl = await GetShortURLObjectFromLongURL(longUrl);
+                    await _storage.DeleteShortURLAsync(shortenedUrl.ShortURL);
+                    return;
+                }
+                catch (System.Exception ) 
+                {
+                }
         }
-        catch (System.Exception ) {
-           throw new System.InvalidOperationException("Short URL Not exists.");
-        }
+        while (retry++ < 5);
+        throw new System.InvalidOperationException("Short URL Not exists.");
        }
-
        public async Task<ShortenUrlStatistics>  GetStatistics(string shortenedUrl)
        {
            try{
-               var shortURL = await _storage.GetShortURLByIdAsync(shortenedUrl);
+               var token = TokenFromFullShortURL(shortenedUrl); 
+               var shortURL = await _storage.GetShortURLByIdAsync(token);
                return new ShortenUrlStatistics(){NumberOfTimesAccessed = shortURL.TimeAccess, LastAccessedOn = shortURL.LastAccessed};
            }
            catch(KeyNotFoundException){
                throw new System.Exception("Short URL Not exists.");
            }
        }
-       private string GenerateShortUrl(string originalUrl)
+
+       private async Task<string> GenerateShortUrl(string originalUrl, int retry = 0)
        {
-            using SHA256 sha256Hash = SHA256.Create();
-            byte[] bytes = sha256Hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(originalUrl));
-            return BitConverter.ToString(bytes).Replace("-", string.Empty).Substring(0, 5);
-       }
-       private async Task<ShortURLObject> GetShortURLObjectFromLongURL(string longUrl)
-       {
-            var token = await Task.Run(() => { 
-                return GenerateShortUrl(longUrl);
+            byte[] bytes = await Task.Run(() => { 
+                using SHA256 sha256Hash = SHA256.Create();
+                return sha256Hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(originalUrl));
             });
+            var token = BitConverter.ToString(bytes).Replace("-", string.Empty).Substring(0, 10); //max 32 characters
+            if(retry > 0)
+            {
+                token = token + "_" + retry;
+            }
+            return token;
+       }
+       private async Task<ShortURLObject> GetShortURLObjectFromLongURL(string longUrl, int retry = 0)
+       {
+            var token = await  GenerateShortUrl(longUrl, retry);
            
             ShortURLObject? shortURL = null;
             try
             {
-                shortURL = await _storage.GetShortURLByIdAsync("www.example.com/" + token);
+                shortURL = await _storage.GetShortURLByIdAsync(token);
             }
             catch (System.Exception)
             {
+                if( retry > 0)
+                {
+                    throw new System.InvalidOperationException("Short URL Not exists.");
+                }
+
                 try
                 {
                     var customToken = await _storage.GetCustomURL(longUrl);
@@ -135,8 +147,15 @@ namespace ShortURLService.Domain
                     throw new System.InvalidOperationException("Short URL Not exists.");
                 }
             }
-           
             return shortURL;
+       } 
+       private string FullShortURLFromToken(string token)
+       {
+           return _prefix + token;
+       }
+       private string TokenFromFullShortURL(string fullShortURL)
+       {
+           return fullShortURL.Replace(_prefix, string.Empty);
        } 
    }
 
