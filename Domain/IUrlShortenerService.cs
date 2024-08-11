@@ -2,11 +2,11 @@ namespace ShortURLService.Domain
 {
     public interface IUrlShortenerService
     {
-        string ShortenUrl(string originalUrl);
-        string ShortenUrl(string originalUrl, string customShortenedUrl);
-        string ExpandUrl(string shortenedUrl);
-        void  DeleteUrl(string shortenedUrl);
-        ShortenUrlStatistics GetStatistics(string shortenedUrl);
+        Task<string> ShortenUrl(string originalUrl);
+        Task<string> ShortenUrl(string originalUrl, string customShortenedUrl);
+        Task<string> ExpandUrl(string shortenedUrl);
+        Task  DeleteUrl(string shortenedUrl);
+        Task<ShortenUrlStatistics> GetStatistics(string shortenedUrl);
    };
 
  

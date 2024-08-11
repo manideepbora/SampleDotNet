@@ -10,7 +10,7 @@ namespace ShortURLService.Infrastucture
 
         public Task<ShortURLObject> GetShortURLByIdAsync(string id)
         {
-            if( !_shortURLs.TryGetValue(id, out ShortURLObject shortURL))
+            if (!_shortURLs.TryGetValue(id, out ShortURLObject? shortURL))
             {
                 throw new KeyNotFoundException();
             }
@@ -41,10 +41,9 @@ namespace ShortURLService.Infrastucture
 
         public Task DeleteShortURLAsync(string id)
         {
-            return Task.Run(() => { 
-
-                if( !_shortURLs.TryRemove(id, out ShortURLObject shortURL))
-                { 
+            return Task.Run(() => {
+                if (!_shortURLs.TryRemove(id, out ShortURLObject ? shortURL))
+                {
                     throw new KeyNotFoundException();
                 }
             } );

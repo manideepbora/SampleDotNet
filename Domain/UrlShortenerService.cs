@@ -12,12 +12,12 @@ namespace ShortURLService.Domain
             _storage = storage;
         }
 
-       public string ShortenUrl(string originalUrl)
+    public async Task<string> ShortenUrl(string originalUrl)
        {
            try
            {
                var shortURL = new ShortURLObject(){ShortURL = "shortURL", LongURL = originalUrl};
-               _storage.AddShortURLAsync(shortURL);
+               await _storage.AddShortURLAsync(shortURL);
                return shortURL.ShortURL;
            }
            catch (System.InvalidOperationException ex)
@@ -27,24 +27,52 @@ namespace ShortURLService.Domain
            
        }
 
-       public string ShortenUrl(string originalUrl, string customShortenedUrl)
+       public async Task<string> ShortenUrl(string originalUrl, string customShortenedUrl)
        {
+        try
+           {
+               var shortURL = new ShortURLObject(){ShortURL = customShortenedUrl, LongURL = originalUrl};
+               await _storage.AddShortURLAsync(shortURL);
+               return shortURL.ShortURL;
+           }
+           catch (System.InvalidOperationException )
+           {
+               throw new System.InvalidOperationException("Short URL already exists.");
+           }
+
            throw new NotImplementedException();
        }
 
-       public string ExpandUrl(string shortenedUrl)
+       public async Task<string> ExpandUrl(string shortenedUrl)
        {
-           throw new NotImplementedException();
+        try{
+            var shortURL = await _storage.GetShortURLByIdAsync(shortenedUrl);
+            return shortURL.LongURL;
+            }
+        catch (System.InvalidOperationException ){
+           throw new System.InvalidOperationException("Short URL Not exists.");
+        }
        }
 
-       public void DeleteUrl(string shortenedUrl)
+       public async Task DeleteUrl(string shortenedUrl)
        {
-           throw new NotImplementedException();
+        try{
+            await _storage.DeleteShortURLAsync(shortenedUrl);
+            }
+        catch (System.InvalidOperationException ) {
+           throw new System.InvalidOperationException("Short URL Not exists.");
+        }
        }
 
-       public ShortenUrlStatistics  GetStatistics(string shortenedUrl)
+       public async Task<ShortenUrlStatistics>  GetStatistics(string shortenedUrl)
        {
-           throw new NotImplementedException();
+           try{
+               var shortURL = await _storage.GetShortURLByIdAsync(shortenedUrl);
+               return new ShortenUrlStatistics(){NumberOfTimesAccessed = shortURL.TimeAccess, LastAccessedOn = shortURL.LastAccessed};
+           }
+           catch (System.InvalidOperationException ){
+               throw new System.InvalidOperationException("Short URL Not exists.");
+           }
        }
    }
 
