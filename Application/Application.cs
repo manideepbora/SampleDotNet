@@ -85,15 +85,15 @@ public class CommandLineService : IInvokeService
     }
     private async Task DeleteUrl()
     {
-        Console.WriteLine("Enter the short URL:");
-        var shortUrlToDelete = Console.ReadLine();
-        if(shortUrlToDelete == null)
+        Console.WriteLine("Enter the long URL:");
+        var longUrlToDelete = Console.ReadLine();
+        if(longUrlToDelete == null)
         {
             Console.WriteLine("Invalid URL");
             return;
         }
         try {
-            await _UrlSvc.DeleteUrl(shortUrlToDelete);
+            await _UrlSvc.DeleteUrl(longUrlToDelete);
         }
         catch (Exception e)
         {

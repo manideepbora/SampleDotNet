@@ -4,10 +4,12 @@ namespace ShortURLService.Domain
     using System.Security.Cryptography;
     
     using System;
+    using System.Formats.Asn1;
 
     public class UrlShortenerService : IUrlShortenerService
     {
         private readonly IShortURLStorage _storage;
+        
         public UrlShortenerService(IShortURLStorage storage)    
         {
             _storage = storage;
@@ -42,7 +44,7 @@ namespace ShortURLService.Domain
             try
             {
                 var shortURL = new ShortURLObject(){ShortURL = genURL, LongURL = originalUrl};
-                await _storage.AddShortURLAsync(shortURL);
+                await _storage.AddShortURLAsync(genURL, shortURL);
                 return shortURL.ShortURL;
             }
             catch (System.InvalidOperationException)
@@ -55,9 +57,10 @@ namespace ShortURLService.Domain
        {
         try
            {
-               customShortenedUrl = "www.example.com/" + customShortenedUrl.Trim(); 
-               var shortURL = new ShortURLObject(){ShortURL = customShortenedUrl, LongURL = originalUrl};
-               await _storage.AddShortURLAsync(shortURL);
+               var newCustomShortenedUrl = "www.example.com/" + customShortenedUrl.Trim(); 
+               var shortURL = new ShortURLObject(){ShortURL = newCustomShortenedUrl, LongURL = originalUrl};
+               await _storage.AddShortURLAsync(newCustomShortenedUrl, shortURL);
+               await _storage.AddCustomURL(originalUrl, newCustomShortenedUrl);
                return shortURL.ShortURL;
            }
            catch (System.Exception )
@@ -74,7 +77,7 @@ namespace ShortURLService.Domain
             var shortURL = await _storage.GetShortURLByIdAsync(shortenedUrl);
             shortURL.TimeAccess++;
             shortURL.LastAccessed = DateTime.Now;
-            await _storage.UpdateShortURLAsync(shortURL);
+            await _storage.UpdateShortURLAsync(shortURL.ShortURL, shortURL);
             return shortURL.LongURL;
             }
         catch (System.Exception ) {
@@ -82,10 +85,11 @@ namespace ShortURLService.Domain
         }
        }
 
-       public async Task DeleteUrl(string shortenedUrl)
+       public async Task DeleteUrl(string longUrl)
        {
         try{
-            await _storage.DeleteShortURLAsync(shortenedUrl);
+            var shortenedUrl = await GetShortURLObjectFromLongURL(longUrl);
+            await _storage.DeleteShortURLAsync(shortenedUrl.ShortURL);
         }
         catch (System.Exception ) {
            throw new System.InvalidOperationException("Short URL Not exists.");
@@ -102,6 +106,38 @@ namespace ShortURLService.Domain
                throw new System.Exception("Short URL Not exists.");
            }
        }
+       private string GenerateShortUrl(string originalUrl)
+       {
+            using SHA256 sha256Hash = SHA256.Create();
+            byte[] bytes = sha256Hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(originalUrl));
+            return BitConverter.ToString(bytes).Replace("-", string.Empty).Substring(0, 5);
+       }
+       private async Task<ShortURLObject> GetShortURLObjectFromLongURL(string longUrl)
+       {
+            var token = await Task.Run(() => { 
+                return GenerateShortUrl(longUrl);
+            });
+           
+            ShortURLObject? shortURL = null;
+            try
+            {
+                shortURL = await _storage.GetShortURLByIdAsync("www.example.com/" + token);
+            }
+            catch (System.Exception)
+            {
+                try
+                {
+                    var customToken = await _storage.GetCustomURL(longUrl);
+                    shortURL = await _storage.GetShortURLByIdAsync(customToken);
+                }
+                catch (System.Exception)
+                {
+                    throw new System.InvalidOperationException("Short URL Not exists.");
+                }
+            }
+           
+            return shortURL;
+       } 
    }
 
     public class ShortenUrlStatistics
