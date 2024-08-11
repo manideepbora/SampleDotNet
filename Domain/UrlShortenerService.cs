@@ -2,6 +2,7 @@ namespace ShortURLService.Domain
 {
     
     using System.Security.Cryptography;
+    
     using System;
 
     public class UrlShortenerService : IUrlShortenerService
@@ -31,7 +32,7 @@ namespace ShortURLService.Domain
                         return data.ShortURL;
                     }
                 }
-                catch (KeyNotFoundException)
+                catch (System.Exception)
                 {
                     foundUnique = true;
                 }
@@ -59,7 +60,7 @@ namespace ShortURLService.Domain
                await _storage.AddShortURLAsync(shortURL);
                return shortURL.ShortURL;
            }
-           catch (System.InvalidOperationException )
+           catch (System.Exception )
            {
                throw new System.InvalidOperationException("Short URL already exists.");
            }
@@ -76,7 +77,7 @@ namespace ShortURLService.Domain
             await _storage.UpdateShortURLAsync(shortURL);
             return shortURL.LongURL;
             }
-        catch (System.InvalidOperationException ){
+        catch (System.Exception ) {
            throw new System.InvalidOperationException("Short URL Not exists.");
         }
        }
@@ -86,7 +87,7 @@ namespace ShortURLService.Domain
         try{
             await _storage.DeleteShortURLAsync(shortenedUrl);
         }
-        catch (System.InvalidOperationException ) {
+        catch (System.Exception ) {
            throw new System.InvalidOperationException("Short URL Not exists.");
         }
        }
