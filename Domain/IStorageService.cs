@@ -1,6 +1,5 @@
-namespace ShortURLService.Infrastucture
+namespace ShortURLService.Domain
 {
-    using ShortenUrl.Domain;
     public interface IShortURLStorage
     {
         Task<ShortURLObject> GetShortURLByIdAsync(string id);
@@ -11,4 +10,3 @@ namespace ShortURLService.Infrastucture
         Task DeleteShortURLAsync(string id);
     }
 }
-

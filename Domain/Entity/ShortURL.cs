@@ -1,4 +1,4 @@
-namespace ShortenUrl.Domain
+namespace ShortURLService.Domain
 {
 
     public class ShortURLObject

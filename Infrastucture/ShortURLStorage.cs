@@ -1,6 +1,6 @@
 namespace ShortURLService.Infrastucture
 {
-    using ShortenUrl.Domain;
+    using ShortURLService.Domain;
     using System;
     using System.Threading.Tasks;
     using System.Collections.Concurrent;

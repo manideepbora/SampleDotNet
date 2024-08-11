@@ -1,7 +1,6 @@
 namespace ShortURLService.Domain
 {
-    using ShortenUrl.Domain;
-    using ShortURLService.Infrastucture;
+    
     using System.Security.Cryptography;
     using System;
 
